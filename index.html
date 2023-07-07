@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Websocket - Chat</title>
+  </head>
+  <style>
+    body {
+      padding: 1em;
+    }
+
+    h3 {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5em;
+      margin: 0;
+    }
+
+    form {
+      display: flex;
+      gap: 1em;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    form div {
+      display: flex;
+      gap: 1em;
+    }
+
+    textarea {
+      margin-top: 2em;
+    }
+  </style>
+  <body>
+    <h3>
+      Connection status:
+      <p>Disconected</p>
+    </h3>
+
+    <p>Username: <span></span></p>
+
+    <form name="chat">
+      <div>
+        <input type="text" id="message" disabled placeholder="type here" />
+        <button type="submit" id="submit" disabled>Send</button>
+      </div>
+
+      <div>
+        <button type="button" id="connect">Enter chat</button>
+        <button type="button" id="quit" disabled>Quit chat</button>
+      </div>
+    </form>
+
+    <textarea cols="70" rows="20"></textarea>
+  </body>
+
+  <script>
+    let websocket;
+    const statusElement = document.querySelector("h3 > p");
+    const userElement = document.querySelector("span");
+    const textArea = document.querySelector("textarea");
+    const submitButton = document.querySelector("button#submit");
+    const quitButton = document.querySelector("button#quit");
+    const connectButton = document.querySelector("button#connect");
+    const inputElement = document.querySelector("input");
+    const form = document.forms.chat;
+    const id = crypto.randomUUID().substr(0, 8);
+    userElement.textContent = `user-${id}`;
+
+    connectButton.onclick = () => {
+      websocket = new WebSocket("ws://localhost:8080/chat");
+
+      websocket.onopen = () => {
+        connectButton.disabled = true;
+        statusElement.textContent = "Connected";
+        websocket.send(`${userElement.textContent} connected`);
+        submitButton.disabled = false;
+        quitButton.disabled = false;
+        inputElement.disabled = false;
+      };
+
+      websocket.onclose = () => {
+        statusElement.textContent = "Connection closed";
+        submitButton.disabled = true;
+        quitButton.disabled = true;
+        inputElement.disabled = true;
+      };
+
+      websocket.onmessage = (event) => {
+        const message = event.data;
+        textArea.textContent += `\n${message}`;
+      };
+    };
+
+    quitButton.onclick = () => {
+      websocket.close();
+      connectButton.disabled = false;
+    };
+
+    form.onsubmit = (event) => {
+      event.preventDefault();
+      const { value } = form.elements.message;
+
+      if (!value.trim()) return;
+
+      websocket.send(`${userElement.textContent}: ${value}`);
+      inputElement.value = "";
+    };
+  </script>
+</html>
